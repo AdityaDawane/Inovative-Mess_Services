@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Vendor</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dashboard">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>📊 Reports & Analytics</h1>
+            </div>
+            <div class="nav-links">
+                <a href="vendor-dashboard.html">Dashboard</a>
+                <a href="vendor-manage-plans.html">Meal Plans</a>
+                <a href="vendor-daily-menu.html">Daily Menu</a>
+                <a href="vendor-scanner.html">Scanner</a>
+                <a href="vendor-students.html">Students</a>
+                <a href="vendor-reports.html">Reports</a>
+                <a href="#" onclick="Auth.logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="dashboard-content">
+        <div class="container">
+            <!-- Today's Summary -->
+            <div class="card">
+                <h2>Today's Summary</h2>
+                <p style="color: #666; margin-top: 0.5rem;" id="todayDate"></p>
+                
+                <div class="feature-grid" style="margin-top: 1.5rem;">
+                    <div class="feature-card">
+                        <div class="feature-icon">🌅</div>
+                        <h3>Breakfast</h3>
+                        <h2 id="breakfastCount" style="color: var(--warning); margin: 1rem 0;">-</h2>
+                        <p>Meals served</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">🍽️</div>
+                        <h3>Lunch</h3>
+                        <h2 id="lunchCount" style="color: var(--info); margin: 1rem 0;">-</h2>
+                        <p>Meals served</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">🌙</div>
+                        <h3>Dinner</h3>
+                        <h2 id="dinnerCount" style="color: var(--primary); margin: 1rem 0;">-</h2>
+                        <p>Meals served</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">✅</div>
+                        <h3>Total</h3>
+                        <h2 id="totalCount" style="color: var(--success); margin: 1rem 0;">-</h2>
+                        <p>Meals served today</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Attendance -->
+            <div class="card" style="margin-top: 2rem;">
+                <h2>Today's Attendance Details</h2>
+                <div id="attendanceTable">
+                    <p class="text-center">Loading attendance data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        Auth.requireAuth('vendor-login.html');
+        const vendorId = Auth.getUserId();
+
+        // Display today's date
+        const today = new Date();
+        document.getElementById('todayDate').textContent = today.toLocaleDateString('en-IN', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        // Load today's attendance
+        async function loadTodayAttendance() {
+            try {
+                const response = await API.vendor.getTodayAttendance(vendorId);
+                const attendance = response.data || [];
+                
+                // Calculate meal counts
+                const counts = {
+                    BREAKFAST: 0,
+                    LUNCH: 0,
+                    DINNER: 0
+                };
+
+                attendance.forEach(item => {
+                    if (counts.hasOwnProperty(item.mealType)) {
+                        counts[item.mealType]++;
+                    }
+                });
+
+                // Update summary cards
+                document.getElementById('breakfastCount').textContent = counts.BREAKFAST;
+                document.getElementById('lunchCount').textContent = counts.LUNCH;
+                document.getElementById('dinnerCount').textContent = counts.DINNER;
+                document.getElementById('totalCount').textContent = attendance.length;
+
+                // Display detailed table
+                displayAttendanceTable(attendance);
+
+            } catch (error) {
+                console.error('Error loading attendance:', error);
+                document.getElementById('attendanceTable').innerHTML = 
+                    '<p class="text-center">Error loading attendance data.</p>';
+            }
+        }
+
+        function displayAttendanceTable(attendance) {
+            const container = document.getElementById('attendanceTable');
+            
+            if (attendance.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center" style="padding: 2rem;">
+                        <h3>No Attendance Records</h3>
+                        <p>No meals have been scanned today.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort by time (most recent first)
+            attendance.sort((a, b) => new Date(b.scanTime) - new Date(a.scanTime));
+
+            let html = `
+                <div style="overflow-x: auto;">
+                    <table class="simple-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Student Name</th>
+                                <th>Meal Type</th>
+                                <th>Scan Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            attendance.forEach((item, index) => {
+                const time = new Date(item.scanTime).toLocaleTimeString('en-IN');
+                html += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${item.customerName || 'Student'}</td>
+                        <td><span class="badge badge-${item.mealType.toLowerCase()}">${item.mealType}</span></td>
+                        <td>${time}</td>
+                        <td><span class="badge badge-success">✓ Verified</span></td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Load data on page load
+        loadTodayAttendance();
+
+        // Refresh every 30 seconds
+        setInterval(loadTodayAttendance, 30000);
+    </script>
+
+    <style>
+        .simple-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .simple-table th {
+            background: #f7fafc;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .simple-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .badge-breakfast {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .badge-lunch {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .badge-dinner {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+    </style>
+</body>
+</html>

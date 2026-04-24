@@ -1,0 +1,554 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>QR Scanner - Mess Management</title>-->
+<!--    <link rel="stylesheet" href="css/style.css">-->
+<!--</head>-->
+<!--<body class="dashboard">-->
+<!--    &lt;!&ndash; Navigation &ndash;&gt;-->
+<!--    <nav class="navbar">-->
+<!--        <div class="container">-->
+<!--            <div class="nav-brand">-->
+<!--                <h1>🍽️ Vendor Scanner</h1>-->
+<!--            </div>-->
+<!--            <div class="nav-links">-->
+<!--                <a href="vendor-dashboard.html">Dashboard</a>-->
+<!--                <a href="vendor-manage-plans.html">Meal Plans</a>-->
+<!--                <a href="vendor-daily-menu.html">Daily Menu</a>-->
+<!--                <a href="vendor-scanner.html">Scanner</a>-->
+<!--                <a href="vendor-students.html">Students</a>-->
+<!--                <a href="vendor-reports.html">Reports</a>-->
+<!--                <a href="#" onclick="Auth.logout()">Logout</a>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </nav>-->
+
+<!--    &lt;!&ndash; Scanner Content &ndash;&gt;-->
+<!--    <div class="dashboard-content">-->
+<!--        <div class="container">-->
+<!--            <div class="card scanner-container">-->
+<!--                <h3>Scan QR Code</h3>-->
+<!--                -->
+<!--                <form id="scanForm">-->
+<!--                    <div class="form-group">-->
+<!--                        <label for="qrCodeInput">QR Code</label>-->
+<!--                        <input -->
+<!--                            type="text" -->
+<!--                            id="qrCodeInput" -->
+<!--                            placeholder="Enter or paste QR code here" -->
+<!--                            autofocus-->
+<!--                            required-->
+<!--                        >-->
+<!--                        <small>Scan with barcode scanner or paste the code</small>-->
+<!--                    </div>-->
+
+<!--                    <div class="form-group">-->
+<!--                        <label for="mealType">Meal Type</label>-->
+<!--                        <select id="mealType" required>-->
+<!--                            <option value="">Select Meal Type</option>-->
+<!--                            <option value="BREAKFAST">Breakfast</option>-->
+<!--                            <option value="LUNCH" selected>Lunch</option>-->
+<!--                            <option value="DINNER">Dinner</option>-->
+<!--                        </select>-->
+<!--                    </div>-->
+
+<!--                    <button type="submit" class="btn btn-success" id="scanBtn">-->
+<!--                        Scan QR Code-->
+<!--                    </button>-->
+<!--                    <button type="button" class="btn btn-secondary" onclick="clearForm()">-->
+<!--                        Clear-->
+<!--                    </button>-->
+<!--                </form>-->
+
+<!--                &lt;!&ndash; Scan Result &ndash;&gt;-->
+<!--                <div id="scanResult" class="hidden"></div>-->
+
+<!--                &lt;!&ndash; Recent Scans &ndash;&gt;-->
+<!--                <div id="recentScans" class="mt-2">-->
+<!--                    <h4>Recent Scans</h4>-->
+<!--                    <div id="recentScansList"></div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    &lt;!&ndash; Sound Effects &ndash;&gt;-->
+<!--    <audio id="successSound" preload="auto">-->
+<!--        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZjjwKF2S56+yhUhQJQ5zd8sFuJAUrgc3y2I4+ChdluuvspFYVCUWc3PLCbSQFLIHO8tiOPgoXZbrs7KRWFQlFnNzyxG4lBSuCzvLYjT8JF2W67OykVhUJRZ3c88NuJAUsgc7y2I8/CRdluO3tpVYVCUOd3PLDbSQFLIHO8tiOPwoXZbrs7KRWFQlFnNzyxG4lBSuCzvLYjT8JF2W67OykVhUJRZ3c88NuJAUsgc7y2I8/CRdluO3tpVYVCUOd3PLDbSQFLIHO8tiOPwoXZbrs7KRWFQlFnNzyxG4lBSuCzvLYjT8JF2W67OykVhUJRZ3c88NuJAUsgc7y2I8/CRdluO3tpVYVCUOd3PLDbSQFLIHO8tiOPwoXZbrs7KRWFQlFnNzyxG4lBSuCzvLYjT8JF2W67OykVhUJRZ3c88NuJAUsgc7y2I8/CRdluO3tpVYVCUOd3PLDbSQFLIHO8tiOPwoXZbrs7KRWFQlFnNzyxG4lBSuCzvLYjT8JF2W67OykVhUJRZ3c88NuJAUsgc7y2I8/CRdluO3tpVYVCUOd3PLDbSQFLIHO8tiOPwoXZbrs7KRWFQlFnNzyxG4lBSuCzvLYjT8JF2W67OykVhUJRZ3c88NuJAUsgc7y2I8/CRdluO3tpVYVCUOd3PLDbSQFLIHO8tiOPwoXZbrs7KRWFQlFnNzyxG4lBSuCzvLYjT8JF2W67OykVhUJRZ3c88NuJAU=" type="audio/wav">-->
+<!--    </audio>-->
+<!--    <audio id="errorSound" preload="auto">-->
+<!--        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZjjwKF2S56+yhUhQJQ5zd8sFuJAUrgc3y2I4+ChdluuvspFYVCUWc3PLCbSQFLIHO8tiOPgoXZbrs7KRWFQlFnNzyxG4lBSuCzvLYjT8JF2W67OykVhUJRZ3c88NuJAU=" type="audio/wav">-->
+<!--    </audio>-->
+
+<!--    <script src="js/api.js"></script>-->
+<!--    <script>-->
+<!--        // Check authentication-->
+<!--        Auth.requireAuth('vendor-login.html');-->
+
+<!--        const form = document.getElementById('scanForm');-->
+<!--        const qrCodeInput = document.getElementById('qrCodeInput');-->
+<!--        const scanBtn = document.getElementById('scanBtn');-->
+<!--        const scanResult = document.getElementById('scanResult');-->
+<!--        const recentScansList = document.getElementById('recentScansList');-->
+<!--        const successSound = document.getElementById('successSound');-->
+<!--        const errorSound = document.getElementById('errorSound');-->
+
+<!--        let recentScans = [];-->
+
+<!--        form.addEventListener('submit', async (e) => {-->
+<!--            e.preventDefault();-->
+<!--            await scanQRCode();-->
+<!--        });-->
+
+<!--        // Auto-submit when QR code is pasted/scanned-->
+<!--        qrCodeInput.addEventListener('input', (e) => {-->
+<!--            const value = e.target.value.trim();-->
+<!--            if (value.length >= 10) {-->
+<!--                // Auto-submit after short delay-->
+<!--                setTimeout(() => {-->
+<!--                    if (qrCodeInput.value.trim() === value) {-->
+<!--                        scanQRCode();-->
+<!--                    }-->
+<!--                }, 500);-->
+<!--            }-->
+<!--        });-->
+
+<!--        async function scanQRCode() {-->
+<!--            const qrCode = qrCodeInput.value.trim();-->
+<!--            const mealType = document.getElementById('mealType').value;-->
+
+<!--            if (!qrCode || !mealType) {-->
+<!--                showResult('Please fill in all fields', 'error');-->
+<!--                return;-->
+<!--            }-->
+
+<!--            try {-->
+<!--                UI.showLoading(scanBtn);-->
+
+<!--                const response = await API.vendor.scanQR(qrCode, mealType, 1);-->
+
+<!--                if (response.success) {-->
+<!--                    successSound.play();-->
+<!--                    showResult(-->
+<!--                        `<h4>✅ ${response.message}</h4>-->
+<!--                         <p><strong>Student:</strong> ${response.data.customerName}</p>-->
+<!--                         <p><strong>Meal:</strong> ${response.data.mealType}</p>-->
+<!--                         <p><strong>Time:</strong> ${new Date(response.data.scanTime).toLocaleString()}</p>`,-->
+<!--                        'success'-->
+<!--                    );-->
+
+<!--                    // Add to recent scans-->
+<!--                    addRecentScan(response.data);-->
+
+<!--                    // Clear form-->
+<!--                    clearForm();-->
+<!--                }-->
+<!--            } catch (error) {-->
+<!--                errorSound.play();-->
+<!--                showResult(`<h4>❌ Scan Failed</h4><p>${error.message}</p>`, 'error');-->
+<!--            } finally {-->
+<!--                UI.hideLoading(scanBtn, 'Scan QR Code');-->
+<!--                // Focus back to input-->
+<!--                setTimeout(() => qrCodeInput.focus(), 100);-->
+<!--            }-->
+<!--        }-->
+
+<!--        function showResult(message, type) {-->
+<!--            scanResult.className = `scan-result ${type}`;-->
+<!--            scanResult.innerHTML = message;-->
+<!--            scanResult.classList.remove('hidden');-->
+
+<!--            // Auto-hide after 5 seconds-->
+<!--            setTimeout(() => {-->
+<!--                scanResult.classList.add('hidden');-->
+<!--            }, 5000);-->
+<!--        }-->
+
+<!--        function clearForm() {-->
+<!--            qrCodeInput.value = '';-->
+<!--            qrCodeInput.focus();-->
+<!--        }-->
+
+<!--        function addRecentScan(scanData) {-->
+<!--            recentScans.unshift({-->
+<!--                ...scanData,-->
+<!--                timestamp: new Date()-->
+<!--            });-->
+
+<!--            // Keep only last 10 scans-->
+<!--            if (recentScans.length > 10) {-->
+<!--                recentScans = recentScans.slice(0, 10);-->
+<!--            }-->
+
+<!--            displayRecentScans();-->
+<!--        }-->
+
+<!--        function displayRecentScans() {-->
+<!--            if (recentScans.length === 0) {-->
+<!--                recentScansList.innerHTML = '<p>No scans yet</p>';-->
+<!--                return;-->
+<!--            }-->
+
+<!--            let html = '<table><thead><tr><th>Student</th><th>Meal</th><th>Time</th></tr></thead><tbody>';-->
+<!--            -->
+<!--            recentScans.forEach(scan => {-->
+<!--                html += `-->
+<!--                    <tr>-->
+<!--                        <td>${scan.customerName}</td>-->
+<!--                        <td>${scan.mealType}</td>-->
+<!--                        <td>${scan.timestamp.toLocaleTimeString()}</td>-->
+<!--                    </tr>-->
+<!--                `;-->
+<!--            });-->
+<!--            -->
+<!--            html += '</tbody></table>';-->
+<!--            recentScansList.innerHTML = html;-->
+<!--        }-->
+
+<!--        // Initialize-->
+<!--        displayRecentScans();-->
+<!--        qrCodeInput.focus();-->
+
+<!--        // Keyboard shortcut: Ctrl+L to focus input-->
+<!--        document.addEventListener('keydown', (e) => {-->
+<!--            if (e.ctrlKey && e.key === 'l') {-->
+<!--                e.preventDefault();-->
+<!--                qrCodeInput.focus();-->
+<!--                qrCodeInput.select();-->
+<!--            }-->
+<!--        });-->
+<!--    </script>-->
+<!--</body>-->
+<!--</html>-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner - Mess Management</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        .session-banner {
+            border-radius: 14px; padding: 1.25rem 1.75rem;
+            margin-bottom: 1.5rem;
+            display: flex; justify-content: space-between; align-items: center;
+            color: white; font-weight: 700;
+        }
+        .session-banner.BREAKFAST { background: linear-gradient(135deg,#f6ad55,#ed8936); }
+        .session-banner.LUNCH     { background: linear-gradient(135deg,#4299e1,#3182ce); }
+        .session-banner.DINNER    { background: linear-gradient(135deg,#667eea,#5a67d8); }
+        .session-banner.CLOSED    { background: linear-gradient(135deg,#a0aec0,#718096); }
+        .session-title { font-size: 1.4rem; }
+        .session-sub   { font-size: 0.85rem; opacity: 0.85; margin-top: 0.25rem; }
+        .session-count .big { font-size: 2.5rem; line-height: 1; }
+        .session-count .lbl { font-size: 0.78rem; opacity: 0.85; text-align:right; }
+
+        .qr-display {
+            display: flex; flex-direction: column; align-items: center;
+            padding: 2rem; background: #f7fafc;
+            border-radius: 14px; margin-bottom: 1.5rem;
+        }
+        .qr-display h3 { margin-bottom: 1rem; color: #2d3748; }
+        #sessionQRCode { border: 6px solid white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .qr-instruction { margin-top: 1rem; font-size: 0.9rem; color: #4a5568; font-weight: 600; text-align: center; }
+        .qr-code-text { margin-top: 0.5rem; font-size: 0.7rem; color: #a0aec0; word-break: break-all; text-align: center; max-width: 280px; }
+
+        .countdown-box {
+            background: #fffbeb; border: 2px solid #f6ad55;
+            border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem;
+        }
+        .countdown-box .next-label { font-weight: 700; color: #744210; margin-bottom: 0.4rem; }
+        .countdown-box .timer { font-size: 2.4rem; font-weight: 800; color: #c05621; letter-spacing: 3px; }
+
+        .closed-box {
+            background: #f7fafc; border: 2px dashed #cbd5e0;
+            border-radius: 12px; padding: 2.5rem; text-align: center; margin-bottom: 1.5rem; color: #718096;
+        }
+        .closed-box .icon { font-size: 3rem; margin-bottom: 0.5rem; }
+
+        .meal-pills { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .meal-pill {
+            flex: 1; padding: 0.65rem 0.5rem; border-radius: 8px;
+            text-align: center; font-size: 0.82rem; font-weight: 600;
+            border: 2px solid #e2e8f0;
+        }
+        .meal-pill.done    { background:#c6f6d5; border-color:#38a169; color:#22543d; }
+        .meal-pill.active  { background:#ebf8ff; border-color:#4299e1; color:#2b6cb0; }
+        .meal-pill.upcoming{ background:#f7fafc; border-color:#e2e8f0; color:#a0aec0; }
+
+        .scans-table { width:100%; border-collapse:collapse; }
+        .scans-table th { background:#f7fafc; padding:0.6rem 0.75rem; text-align:left; font-size:0.85rem; border-bottom:2px solid #e2e8f0; }
+        .scans-table td { padding:0.6rem 0.75rem; border-bottom:1px solid #edf2f7; font-size:0.875rem; }
+        .badge { padding:3px 10px; border-radius:10px; font-size:0.78rem; font-weight:600; }
+        .badge-BREAKFAST { background:#fef3c7; color:#92400e; }
+        .badge-LUNCH     { background:#dbeafe; color:#1e40af; }
+        .badge-DINNER    { background:#e0e7ff; color:#3730a3; }
+        .clock-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; }
+    </style>
+</head>
+<body class="dashboard">
+<nav class="navbar">
+    <div class="container">
+        <div class="nav-brand"><h1>🍽️ Mess Scanner</h1></div>
+        <div class="nav-links">
+            <a href="vendor-dashboard.html">Dashboard</a>
+            <a href="vendor-manage-plans.html">Meal Plans</a>
+            <a href="vendor-daily-menu.html">Daily Menu</a>
+            <a href="vendor-scanner.html">Scanner</a>
+            <a href="vendor-students.html">Students</a>
+            <a href="vendor-reports.html">Reports</a>
+            <a href="#" onclick="Auth.logout()">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="dashboard-content">
+    <div class="container">
+        <div class="card">
+
+            <div class="clock-bar">
+                <span style="font-weight:600; color:#4a5568;">📅 <span id="todayDate"></span></span>
+                <span id="liveClock" style="font-size:1.1rem; font-weight:800; color:#2d3748;"></span>
+            </div>
+
+            <!-- Meal timeline pills -->
+            <div class="meal-pills">
+                <div class="meal-pill upcoming" id="pill-BREAKFAST">🌅 Breakfast<br><small>6AM – 10AM</small></div>
+                <div class="meal-pill upcoming" id="pill-LUNCH">☀️ Lunch<br><small>11AM – 3PM</small></div>
+                <div class="meal-pill upcoming" id="pill-DINNER">🌙 Dinner<br><small>7PM – 10PM</small></div>
+            </div>
+
+            <!-- Session banner -->
+            <div class="session-banner CLOSED" id="sessionBanner">
+                <div>
+                    <div class="session-title" id="bannerTitle">⏳ No Active Session</div>
+                    <div class="session-sub"   id="bannerSub">Waiting for meal time...</div>
+                </div>
+                <div class="session-count" id="sessionCountBox" style="display:none;">
+                    <div class="big" id="sessionCount">0</div>
+                    <div class="lbl">scanned</div>
+                </div>
+            </div>
+
+            <!-- ACTIVE: QR code display -->
+            <div id="activeSection" style="display:none;">
+                <div class="qr-display">
+                    <h3 id="qrTitle">📲 Session QR Code</h3>
+                    <div id="sessionQRCode"></div>
+                    <div class="qr-instruction">
+                        Students: open your dashboard → tap <strong>"Mark Attendance"</strong>
+                    </div>
+                    <div class="qr-code-text" id="qrCodeText"></div>
+                </div>
+            </div>
+
+            <!-- CLOSED: countdown or all-done -->
+            <div id="closedSection">
+                <div class="countdown-box" id="countdownBox" style="display:none;">
+                    <div class="next-label" id="nextMealLabel">Next meal opens in</div>
+                    <div class="timer" id="countdownTimer">00:00:00</div>
+                </div>
+                <div class="closed-box" id="noSessionBox">
+                    <div class="icon">🌙</div>
+                    <p style="font-weight:600; margin:0;">All meal sessions done for today</p>
+                    <p style="font-size:0.85rem; margin-top:0.4rem; color:#a0aec0;">See you tomorrow!</p>
+                </div>
+            </div>
+
+            <!-- Today's scans -->
+            <div style="margin-top:1.5rem;">
+                <h3 style="margin-bottom:0.75rem;">
+                    Today's Attendance
+                    <span style="font-size:0.8rem; color:#a0aec0; font-weight:400; margin-left:0.5rem;">refreshes every 30s</span>
+                </h3>
+                <div id="scansList"><p style="text-align:center; color:#a0aec0;">Loading...</p></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    Auth.requireAuth('vendor-login.html');
+    const vendorId = parseInt(localStorage.getItem('userId'));
+    const token    = localStorage.getItem('token');
+
+    const MEALS = [
+        { type:'BREAKFAST', label:'🌅 Breakfast', start:6,  end:10 },
+        { type:'LUNCH',     label:'☀️ Lunch',     start:11, end:15 },
+        { type:'DINNER',    label:'🌙 Dinner',    start:19, end:22 },
+    ];
+
+    let currentMeal   = null;
+    let currentQRCode = null;
+    let todayScans    = [];
+
+    // ── Clock ─────────────────────────────────────────────────
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('todayDate').textContent =
+            now.toLocaleDateString('en-IN', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+        document.getElementById('liveClock').textContent =
+            now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    }
+
+    function getActiveMeal() {
+        const h = new Date().getHours();
+        return MEALS.find(m => h >= m.start && h < m.end) || null;
+    }
+    function getNextMeal() {
+        const h = new Date().getHours();
+        return MEALS.find(m => m.start > h) || null;
+    }
+
+    function updatePills(active) {
+        const h = new Date().getHours();
+        MEALS.forEach(m => {
+            const p = document.getElementById('pill-' + m.type);
+            if (active && m.type === active.type) p.className = 'meal-pill active';
+            else if (h >= m.end)                  p.className = 'meal-pill done';
+            else                                   p.className = 'meal-pill upcoming';
+        });
+    }
+
+    function updateCountdown(next) {
+        if (!next) return;
+        const now   = new Date();
+        const opens = new Date();
+        opens.setHours(next.start, 0, 0, 0);
+        const diff = opens - now;
+        if (diff <= 0) return;
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000)   / 1000);
+        document.getElementById('countdownTimer').textContent =
+            String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+        document.getElementById('nextMealLabel').textContent =
+            next.label + ' opens in';
+    }
+
+    async function fetchSessionQR(meal) {
+        const res  = await fetch(
+            `http://localhost:8081/api/vendor/session-qr?vendorId=${vendorId}&mealType=${meal.type}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        const data = await res.json();
+        if (data.success) return data.data.sessionQR;
+        throw new Error(data.message);
+    }
+
+    function renderQR(code) {
+        const el = document.getElementById('sessionQRCode');
+        el.innerHTML = '';
+        new QRCode(el, { text: code, width: 240, height: 240, colorDark:'#2d3748', colorLight:'#ffffff' });
+        document.getElementById('qrCodeText').textContent = code;
+    }
+
+    async function refreshSession() {
+        const active = getActiveMeal();
+        const next   = getNextMeal();
+        updatePills(active);
+
+        if (active) {
+            document.getElementById('activeSection').style.display  = 'block';
+            document.getElementById('closedSection').style.display  = 'none';
+            document.getElementById('sessionCountBox').style.display = 'block';
+
+            const banner = document.getElementById('sessionBanner');
+            banner.className = 'session-banner ' + active.type;
+            document.getElementById('bannerTitle').textContent = active.label + ' — OPEN';
+            document.getElementById('bannerSub').textContent   =
+                active.start + ':00 – ' + active.end + ':00  ·  Students can mark attendance now';
+            document.getElementById('qrTitle').textContent = '📲 ' + active.label + ' QR Code';
+
+            // Regenerate QR only when meal changes
+            if (!currentMeal || currentMeal.type !== active.type) {
+                currentMeal = active;
+                try {
+                    currentQRCode = await fetchSessionQR(active);
+                    renderQR(currentQRCode);
+                } catch(e) { console.error('QR error:', e); }
+            }
+
+            const count = todayScans.filter(s => s.mealType === active.type).length;
+            document.getElementById('sessionCount').textContent = count;
+
+        } else {
+            currentMeal = null;
+            document.getElementById('activeSection').style.display  = 'none';
+            document.getElementById('closedSection').style.display  = 'block';
+            document.getElementById('sessionCountBox').style.display = 'none';
+
+            const banner = document.getElementById('sessionBanner');
+            banner.className = 'session-banner CLOSED';
+            document.getElementById('bannerTitle').textContent = '⏳ No Active Session';
+            document.getElementById('bannerSub').textContent   =
+                next ? 'Next: ' + next.label + ' at ' + next.start + ':00' : 'All sessions done for today';
+
+            if (next) {
+                document.getElementById('countdownBox').style.display  = 'block';
+                document.getElementById('noSessionBox').style.display  = 'none';
+                updateCountdown(next);
+            } else {
+                document.getElementById('countdownBox').style.display  = 'none';
+                document.getElementById('noSessionBox').style.display  = 'block';
+            }
+        }
+    }
+
+    async function loadTodayScans() {
+        try {
+            const res  = await fetch('http://localhost:8081/api/vendor/attendance/today',
+                { headers: { 'Authorization': `Bearer ${token}` } });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.success && data.data) {
+                todayScans = data.data;
+                displayScans();
+                if (currentMeal) {
+                    document.getElementById('sessionCount').textContent =
+                        todayScans.filter(s => s.mealType === currentMeal.type).length;
+                }
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    function displayScans() {
+        const container = document.getElementById('scansList');
+        if (!todayScans.length) {
+            container.innerHTML = '<p style="text-align:center;color:#a0aec0;">No attendance recorded today</p>';
+            return;
+        }
+        const sorted = [...todayScans].reverse();
+        let html = `<div style="overflow-x:auto;"><table class="scans-table">
+            <thead><tr><th>#</th><th>Student</th><th>Meal</th><th>Time</th></tr></thead><tbody>`;
+        sorted.forEach((s, i) => {
+            const time = s.scanTime
+                ? new Date(s.scanTime).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})
+                : '—';
+            html += `<tr>
+                <td style="color:#a0aec0;">${i+1}</td>
+                <td><strong>${s.customerName || '—'}</strong></td>
+                <td><span class="badge badge-${s.mealType}">${s.mealType}</span></td>
+                <td>${time}</td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    }
+
+    // ── Init ──────────────────────────────────────────────────
+    updateClock();
+    setInterval(updateClock, 1000);
+    refreshSession();
+    setInterval(refreshSession, 1000);   // checks every second for session change
+    loadTodayScans();
+    setInterval(loadTodayScans, 30000);
+</script>
+</body>
+</html>

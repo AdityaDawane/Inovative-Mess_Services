@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Menu - Vendor</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dashboard">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>📋 Daily Menu</h1>
+            </div>
+            <div class="nav-links">
+                <a href="vendor-dashboard.html">Dashboard</a>
+                <a href="vendor-manage-plans.html">Meal Plans</a>
+                <a href="vendor-daily-menu.html">Daily Menu</a>
+                <a href="vendor-scanner.html">Scanner</a>
+                <a href="vendor-students.html">Students</a>
+                <a href="vendor-reports.html">Reports</a>
+                <a href="#" onclick="Auth.logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="dashboard-content">
+        <div class="container">
+            <!-- Today's Menu -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <div>
+                        <h2>Today's Menu</h2>
+                        <p style="color: #666; margin-top: 0.5rem;" id="todayDate"></p>
+                    </div>
+                    <button onclick="showCreateMenu()" class="btn btn-primary">
+                        ➕ Add Menu Item
+                    </button>
+                </div>
+
+                <!-- Menu Form -->
+                <div id="menuForm" style="display: none; margin-bottom: 2rem; padding: 1.5rem; background: #f7fafc; border-radius: 8px;">
+                    <h3>Add Menu Item</h3>
+                    <div id="menuMessage"></div>
+                    
+                    <form id="dailyMenuForm">
+                        <div class="form-group">
+                            <label for="mealType">Meal Type *</label>
+                            <select id="mealType" required>
+                                <option value="">Select meal...</option>
+                                <option value="BREAKFAST">Breakfast</option>
+                                <option value="LUNCH">Lunch</option>
+                                <option value="DINNER">Dinner</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="items">Menu Items *</label>
+                            <textarea id="items" required rows="3" placeholder="e.g., Idli, Sambar, Chutney, Tea"></textarea>
+                            <small>Separate items with commas</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="menuDescription">Description (Optional)</label>
+                            <textarea id="menuDescription" rows="2" placeholder="Any special notes about today's menu..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" id="isAvailable" checked>
+                                Available for booking
+                            </label>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem;">
+                            <button type="submit" class="btn btn-primary" id="menuSubmitBtn">
+                                Add Menu
+                            </button>
+                            <button type="button" onclick="hideMenuForm()" class="btn" style="background: #6c757d;">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Menu Display -->
+                <div id="menuDisplay">
+                    <p class="text-center">Loading today's menu...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        Auth.requireAuth('vendor-login.html');
+        const vendorId = Auth.getUserId();
+        const token = localStorage.getItem('token');
+
+        // Display today's date
+        const today = new Date();
+        document.getElementById('todayDate').textContent = today.toLocaleDateString('en-IN', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        function showCreateMenu() {
+            document.getElementById('menuForm').style.display = 'block';
+            document.getElementById('dailyMenuForm').reset();
+            document.getElementById('isAvailable').checked = true;
+            document.getElementById('menuMessage').innerHTML = '';
+        }
+
+        function hideMenuForm() {
+            document.getElementById('menuForm').style.display = 'none';
+            document.getElementById('dailyMenuForm').reset();
+        }
+
+        // ✅ CORRECT: Attach to the FORM element (dailyMenuForm)
+        document.getElementById('dailyMenuForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const messageDiv = document.getElementById('menuMessage'); // ✅ Correct ID
+
+            if (!vendorId || !token) {
+                messageDiv.innerHTML = '<div class="alert alert-error">Please login first!</div>';
+                setTimeout(() => window.location.href = 'vendor-login.html', 1500);
+                return;
+            }
+
+            // Get items as string and convert to array
+            const itemsInput = document.getElementById('items').value;
+            const itemsArray = itemsInput.split(',').map(item => item.trim()).filter(item => item.length > 0);
+
+            if (itemsArray.length === 0) {
+                messageDiv.innerHTML = '<div class="alert alert-error">Please enter at least one menu item!</div>';
+                return;
+            }
+
+            // ✅ Use TODAY's date (not a form field)
+            const todayDate = new Date().toISOString().split('T')[0];
+
+            const menuData = {
+                menuDate: todayDate,  // ✅ Today's date
+                mealType: document.getElementById('mealType').value,
+                items: itemsArray,  // ✅ Array format
+                description: document.getElementById('menuDescription').value || '',
+                isAvailable: document.getElementById('isAvailable').checked,
+                vendorId: parseInt(vendorId)  // ✅ Include vendorId
+            };
+
+            console.log('Sending menu data:', menuData);
+
+            try {
+                const response = await fetch('http://localhost:8081/api/vendor/menu', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(menuData)
+                });
+
+                const result = await response.json();
+                console.log('Response:', result);
+
+                if (result.success) {
+                    messageDiv.innerHTML = '<div class="alert alert-success">✅ Menu added successfully!</div>';
+                    document.getElementById('dailyMenuForm').reset();
+                    document.getElementById('isAvailable').checked = true;
+                    hideMenuForm();
+                    loadTodayMenu(); // Reload menu list
+                } else {
+                    messageDiv.innerHTML = `<div class="alert alert-error">❌ ${result.message}</div>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                messageDiv.innerHTML = '<div class="alert alert-error">❌ Error: ' + error.message + '</div>';
+            }
+        });
+
+        // Load today's menu
+        async function loadTodayMenu() {
+            try {
+                const response = await API.public.getTodayMenu();
+                displayMenu(response.data || []);
+            } catch (error) {
+                console.error('Error loading menu:', error);
+                document.getElementById('menuDisplay').innerHTML =
+                    '<p class="text-center">Error loading menu. Please try again.</p>';
+            }
+        }
+
+        function displayMenu(menuItems) {
+            const container = document.getElementById('menuDisplay');
+
+            if (menuItems.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center" style="padding: 2rem;">
+                        <h3>No Menu Set for Today</h3>
+                        <p>Click "Add Menu Item" to create today's menu!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const mealTypes = {
+                'BREAKFAST': [],
+                'LUNCH': [],
+                'DINNER': []
+            };
+
+            menuItems.forEach(item => {
+                if (mealTypes[item.mealType]) {
+                    mealTypes[item.mealType].push(item);
+                }
+            });
+
+            let html = '<div class="feature-grid">';
+
+            Object.entries(mealTypes).forEach(([mealType, items]) => {
+                if (items.length > 0) {
+                    const icons = {
+                        'BREAKFAST': '🌅',
+                        'LUNCH': '🍽️',
+                        'DINNER': '🌙'
+                    };
+
+                    items.forEach(item => {
+                        html += `
+                            <div class="feature-card">
+                                <div class="feature-icon">${icons[mealType]}</div>
+                                <h3>${mealType}</h3>
+                                <div style="margin: 1rem 0; text-align: left;">
+                                    <strong>Items:</strong>
+                                    <p style="margin-top: 0.5rem; line-height: 1.6;">${item.items}</p>
+                                </div>
+                                ${item.description ? `<p style="font-size: 0.9rem; color: #666; font-style: italic;">${item.description}</p>` : ''}
+                                <div style="margin-top: 1rem;">
+                                    <span class="badge ${item.isAvailable ? 'badge-success' : 'badge-error'}">
+                                        ${item.isAvailable ? '✓ Available' : '✗ Not Available'}
+                                    </span>
+                                </div>
+                                <button onclick="deleteMenu(${item.menuId}, '${mealType}')"
+                                        class="btn" style="width: 100%; margin-top: 1rem; background: #dc2626; color: white;">
+                                    Delete
+                                </button>
+                            </div>
+                        `;
+                    });
+                }
+            });
+
+            if (html === '<div class="feature-grid">') {
+                html = `<div class="text-center" style="padding: 2rem;">
+                    <h3>No Menu Items</h3>
+                    <p>Add menu items for today!</p>
+                </div>`;
+            } else {
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        async function deleteMenu(menuId, mealType) {
+            if (!confirm(`Delete ${mealType} menu?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:8081/api/vendor/menu/${menuId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Menu deleted successfully!');
+                    loadTodayMenu();
+                } else {
+                    alert('Error deleting menu: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Load menu on page load
+        loadTodayMenu();
+    </script>
+
+    <style>
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .badge-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</body>
+</html>

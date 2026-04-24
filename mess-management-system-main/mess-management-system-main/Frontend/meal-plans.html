@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meal Plans - Mess Management</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dashboard">
+<!-- Navigation -->
+<nav class="navbar">
+    <div class="container">
+        <div class="nav-brand">
+            <h1 id="pageTitle">🍽️ Meal Plans</h1>
+        </div>
+        <div class="nav-links">
+            <a href="student-dashboard.html">Dashboard</a>
+            <a href="student-vendors.html">Browse Messes</a>
+            <a href="meal-plans.html">Meal Plans</a>
+            <a href="my-qr-code.html">My QR Code</a>
+            <a href="#" onclick="Auth.logout()">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Dashboard Content -->
+<div class="dashboard-content">
+    <div class="container">
+        <div class="card">
+            <div id="messInfo" style="margin-bottom: 1rem;"></div>
+            <h2>Available Meal Plans</h2>
+            <p>Choose a plan that suits your needs</p>
+
+            <div id="plansSection">
+                <p class="text-center">Loading meal plans...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    // Check authentication
+    Auth.requireAuth('student-login.html');
+
+    const customerId = Auth.getUserId();
+
+    // ✅ Get vendor from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const vendorId = urlParams.get('vendor');
+    const messName = localStorage.getItem('selectedMessName') || '';
+
+    // ✅ Update page title if vendor selected
+    if (vendorId && messName) {
+        document.getElementById('pageTitle').textContent = `🍽️ ${messName} - Meal Plans`;
+        document.getElementById('messInfo').innerHTML = `
+            <div class="alert alert-info" style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 1rem;">
+                <strong>🏢 Mess:</strong> ${messName}
+                <br>
+                <a href="student-vendors.html" style="color: #2196f3; text-decoration: underline;">← Choose different mess</a>
+            </div>
+        `;
+    }
+
+    // Load meal plans
+    async function loadPlans() {
+        try {
+            const response = await API.public.getPlans();
+
+            if (response.success && response.data) {
+                // ✅ For now show all plans (vendor filtering will be added in backend later)
+                displayPlans(response.data);
+            } else {
+                showNoPlanMessage();
+            }
+        } catch (error) {
+            console.error('Error loading plans:', error);
+            document.getElementById('plansSection').innerHTML =
+                '<p class="text-center">Error loading plans. Please try again.</p>';
+        }
+    }
+
+    function displayPlans(plans) {
+        const plansSection = document.getElementById('plansSection');
+
+        if (!plans || plans.length === 0) {
+            showNoPlanMessage();
+            return;
+        }
+
+        let html = '<div class="feature-grid">';
+
+        plans.forEach(plan => {
+            // Parse meals included
+            const meals = parseMeals(plan.mealsIncluded);
+
+            html += `
+                <div class="feature-card">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <h3>${plan.planName}</h3>
+                        <span class="badge badge-${plan.planType.toLowerCase()}">${plan.planType}</span>
+                    </div>
+
+                    <p style="min-height: 2.5rem;">${plan.description || 'Complete meal plan'}</p>
+
+                    <div style="margin: 1rem 0;">
+                        ${plan.discountPercentage > 0 ?
+                            `<div style="text-decoration: line-through; color: #888; font-size: 0.9rem;">₹${plan.price}</div>`
+                            : ''}
+                        <h2 style="color: var(--primary); margin: 0.5rem 0;">
+                            ₹${plan.finalPrice || plan.price}
+                        </h2>
+                        ${plan.discountPercentage > 0 ?
+                            `<div style="color: var(--success); font-weight: 600;">Save ${plan.discountPercentage}%</div>`
+                            : ''}
+                    </div>
+
+                    <div style="font-size: 0.9rem; margin: 1rem 0; text-align: left;">
+                        <div>📅 <strong>Duration:</strong> ${plan.durationDays} days</div>
+                        <div>🍽️ <strong>Meals:</strong> ${meals.join(', ')}</div>
+                    </div>
+
+                    <button onclick="bookPlan(${plan.planId}, '${plan.planName}', ${plan.finalPrice || plan.price})"
+                            class="btn btn-primary"
+                            style="width: 100%; margin-top: 1rem;">
+                        Book Now
+                    </button>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        plansSection.innerHTML = html;
+    }
+
+    function parseMeals(mealsIncluded) {
+        try {
+            const meals = typeof mealsIncluded === 'string'
+                ? JSON.parse(mealsIncluded)
+                : mealsIncluded;
+
+            const included = [];
+            if (meals.breakfast) included.push('Breakfast');
+            if (meals.lunch) included.push('Lunch');
+            if (meals.dinner) included.push('Dinner');
+            return included.length > 0 ? included : ['No meals'];
+        } catch {
+            return ['All meals'];
+        }
+    }
+
+    function showNoPlanMessage() {
+        document.getElementById('plansSection').innerHTML = `
+            <div class="alert alert-warning">
+                <h3>No Plans Available</h3>
+                <p>Currently no meal plans are available at this mess.</p>
+                <p style="margin-top: 1rem;">
+                    <a href="student-vendors.html" class="btn btn-primary">← Choose Different Mess</a>
+                </p>
+            </div>
+        `;
+    }
+
+
+  async function bookPlan(planId, planName, price) {
+    if (!vendorId) {
+        alert('Please select a mess first!');
+        window.location.href = 'student-vendors.html';
+        return;
+    }
+
+    const token      = localStorage.getItem('token');
+    const customerId = localStorage.getItem('userId');
+
+    try {
+        const checkRes  = await fetch(
+            `http://localhost:8081/api/customer/active-bookings/${customerId}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        const checkData = await checkRes.json();
+
+        if (checkData.success && checkData.data) {
+            // ✅ Only block if the SAME plan is already active/pending
+            const samePlan = checkData.data.find(s =>
+                s.planId == planId &&
+                (s.status === 'ACTIVE' || s.status === 'PENDING')
+            );
+            if (samePlan) {
+                if (samePlan.status === 'ACTIVE') {
+                    alert(`❌ You already have "${planName}" active until ${samePlan.endDate}.\n\nYou can buy a different plan or wait for this one to expire.`);
+                } else {
+                    alert(`⏳ Your "${planName}" request is pending vendor approval.\n\nYou can buy a different plan instead.`);
+                }
+                return;
+            }
+        }
+    } catch(e) {
+        // If check fails, backend will catch it
+    }
+
+    if (!confirm(`Book "${planName}" for ₹${price}?\n\nMess: ${messName}`)) return;
+
+    const paymentId      = 'pay_demo_' + Date.now();
+    const paymentOrderId = 'order_demo_' + Date.now();
+
+    try {
+        const response = await fetch('http://localhost:8081/api/customer/subscribe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                customerId:   parseInt(customerId),
+                planId:       planId,
+                vendorId:     parseInt(vendorId),
+                paymentId,
+                paymentOrderId
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(`✅ Plan booked!\n\n${result.message}`);
+            window.location.href = 'student-dashboard.html';
+        } else {
+            alert('❌ ' + result.message);
+        }
+    } catch(error) {
+        alert('❌ Error: ' + error.message);
+    }
+}
+    // Load plans on page load
+    loadPlans();
+</script>
+</body>
+</html>

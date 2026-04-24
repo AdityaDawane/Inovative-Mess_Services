@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today's Attendance - Mess Management</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dashboard">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>🍽️ Vendor Dashboard</h1>
+            </div>
+            <div class="nav-links">
+                <a href="vendor-scanner.html">Scanner</a>
+                <a href="vendor-attendance.html">Today's Attendance</a>
+                <a href="vendor-students.html">Registered Students</a>
+                <a href="#" onclick="Auth.logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="container">
+            <h2>Today's Attendance</h2>
+            <p id="currentDate"></p>
+        </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-content">
+        <div class="container">
+            <div id="message"></div>
+
+            <!-- Quick Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h4 id="totalScans">0</h4>
+                    <p>Total Scans Today</p>
+                </div>
+                <div class="stat-card">
+                    <h4 id="breakfastCount">0</h4>
+                    <p>Breakfast</p>
+                </div>
+                <div class="stat-card">
+                    <h4 id="lunchCount">0</h4>
+                    <p>Lunch</p>
+                </div>
+                <div class="stat-card">
+                    <h4 id="dinnerCount">0</h4>
+                    <p>Dinner</p>
+                </div>
+            </div>
+
+            <!-- Meal Type Tabs -->
+            <div class="card">
+                <div class="meal-tabs">
+                    <button class="tab-btn active" onclick="filterByMeal('ALL')">All Meals</button>
+                    <button class="tab-btn" onclick="filterByMeal('BREAKFAST')">Breakfast</button>
+                    <button class="tab-btn" onclick="filterByMeal('LUNCH')">Lunch</button>
+                    <button class="tab-btn" onclick="filterByMeal('DINNER')">Dinner</button>
+                </div>
+
+                <div class="mt-2">
+                    <input type="text" id="searchInput" placeholder="Search by student name..." 
+                           onkeyup="searchStudents()" class="search-box">
+                </div>
+
+                <div id="attendanceTable">
+                    <p class="text-center">Loading today's attendance...</p>
+                </div>
+            </div>
+
+            <!-- Export Options -->
+            <div class="card">
+                <h3>Export Options</h3>
+                <button class="btn btn-primary" onclick="exportToExcel()">
+                    📊 Export to Excel
+                </button>
+                <button class="btn btn-secondary" onclick="window.print()">
+                    🖨️ Print Report
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        // Check authentication
+        Auth.requireAuth('vendor-login.html');
+
+        let allAttendance = [];
+        let filteredAttendance = [];
+
+        // Set current date
+        document.getElementById('currentDate').textContent = 
+            new Date().toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+
+        // Load today's attendance
+        async function loadTodaysAttendance() {
+            try {
+                const response = await API.vendor.getTodayAttendance();
+                
+                if (response.success) {
+                    allAttendance = response.data || [];
+                    filteredAttendance = allAttendance;
+                    
+                    updateStats();
+                    displayAttendance(allAttendance);
+                }
+            } catch (error) {
+                document.getElementById('message').innerHTML = 
+                    `<div class="alert alert-error">Error loading attendance: ${error.message}</div>`;
+                displayAttendance([]);
+            }
+        }
+
+        function updateStats() {
+            const totalScans = allAttendance.length;
+            const breakfastCount = allAttendance.filter(a => a.mealType === 'BREAKFAST').length;
+            const lunchCount = allAttendance.filter(a => a.mealType === 'LUNCH').length;
+            const dinnerCount = allAttendance.filter(a => a.mealType === 'DINNER').length;
+
+            document.getElementById('totalScans').textContent = totalScans;
+            document.getElementById('breakfastCount').textContent = breakfastCount;
+            document.getElementById('lunchCount').textContent = lunchCount;
+            document.getElementById('dinnerCount').textContent = dinnerCount;
+        }
+
+        function displayAttendance(attendance) {
+            const tableDiv = document.getElementById('attendanceTable');
+            
+            if (!attendance || attendance.length === 0) {
+                tableDiv.innerHTML = '<p class="text-center">No attendance records for today</p>';
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Student Name</th>
+                            <th>Meal Type</th>
+                            <th>Scan Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            attendance.forEach((record, index) => {
+                const scanTime = new Date(record.scanTime).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const statusClass = record.isValid ? 'badge-success' : 'badge-danger';
+                const statusText = record.isValid ? 'Valid' : 'Invalid';
+
+                html += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><strong>${record.customerName || 'N/A'}</strong></td>
+                        <td>
+                            <span class="meal-badge meal-${record.mealType?.toLowerCase()}">
+                                ${getMealIcon(record.mealType)} ${record.mealType}
+                            </span>
+                        </td>
+                        <td>${scanTime}</td>
+                        <td><span class="badge ${statusClass}">${statusText}</span></td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            tableDiv.innerHTML = html;
+        }
+
+        function getMealIcon(mealType) {
+            switch(mealType) {
+                case 'BREAKFAST': return '🌅';
+                case 'LUNCH': return '🍽️';
+                case 'DINNER': return '🌙';
+                default: return '🍴';
+            }
+        }
+
+        function filterByMeal(mealType) {
+            // Update active tab
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Filter data
+            if (mealType === 'ALL') {
+                filteredAttendance = allAttendance;
+            } else {
+                filteredAttendance = allAttendance.filter(a => a.mealType === mealType);
+            }
+
+            displayAttendance(filteredAttendance);
+        }
+
+        function searchStudents() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (!searchTerm) {
+                displayAttendance(filteredAttendance);
+                return;
+            }
+
+            const searchResults = filteredAttendance.filter(record => 
+                (record.customerName || '').toLowerCase().includes(searchTerm)
+            );
+
+            displayAttendance(searchResults);
+        }
+
+        function exportToExcel() {
+            if (filteredAttendance.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            // Create CSV content
+            let csv = 'Student Name,Meal Type,Scan Time,Status\n';
+            
+            filteredAttendance.forEach(record => {
+                const scanTime = new Date(record.scanTime).toLocaleString();
+                const status = record.isValid ? 'Valid' : 'Invalid';
+                csv += `"${record.customerName}","${record.mealType}","${scanTime}","${status}"\n`;
+            });
+
+            // Download CSV
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadTodaysAttendance, 30000);
+
+        // Load on page load
+        loadTodaysAttendance();
+    </script>
+
+    <style>
+        .meal-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 0;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 1rem 2rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--gray);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--light);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .meal-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: inline-block;
+        }
+
+        .meal-breakfast {
+            background: #fef5e7;
+            color: #d68910;
+        }
+
+        .meal-lunch {
+            background: #e8f8f5;
+            color: #117864;
+        }
+
+        .meal-dinner {
+            background: #ebf5fb;
+            color: #2874a6;
+        }
+
+        .badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d5f4e6;
+            color: #27ae60;
+        }
+
+        .badge-danger {
+            background: #fadbd8;
+            color: #e74c3c;
+        }
+
+        @media print {
+            .navbar, .dashboard-header, .meal-tabs, .search-box, .btn {
+                display: none;
+            }
+            
+            table {
+                width: 100%;
+                font-size: 12px;
+            }
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Choose Your Mess</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="navbar">
+    <div class="nav-brand">🍽️ Mess Management</div>
+    <div class="nav-links">
+        <a href="student-dashboard.html">Dashboard</a>
+        <a href="student-vendors.html" class="active">Browse Messes</a>
+        <a href="student-qr.html">My QR Code</a>
+        <a href="javascript:void(0)" onclick="Auth.logout()">Logout</a>
+    </div>
+</nav>
+
+<div class="container">
+    <h1>🏢 Choose Your Mess</h1>
+    <p>Select a mess to view their meal plans</p>
+
+    <div id="message"></div>
+    <div id="vendorsList" class="feature-grid"></div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    Auth.requireAuth('student-login.html');
+
+    async function loadVendors() {
+        try {
+            const response = await fetch('http://localhost:8081/api/vendor/all', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                displayVendors(result.data);
+            } else {
+                document.getElementById('vendorsList').innerHTML =
+                    '<p class="text-center">No messes available yet.</p>';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('message').innerHTML =
+                '<div class="alert alert-error">Error loading vendors: ' + error.message + '</div>';
+        }
+    }
+
+    function displayVendors(vendors) {
+        const container = document.getElementById('vendorsList');
+
+        if (vendors.length === 0) {
+            container.innerHTML = '<p class="text-center">No messes available yet.</p>';
+            return;
+        }
+
+        let html = '';
+        vendors.forEach(vendor => {
+            html += `
+                <div class="feature-card">
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🏢</div>
+                        <h2 style="margin: 0;">${vendor.messName}</h2>
+                    </div>
+
+                    <div style="margin: 1rem 0; font-size: 0.95rem;">
+                        <p><strong>👤 Manager:</strong> ${vendor.fullName}</p>
+                        <p><strong>📱 Phone:</strong> ${vendor.phone}</p>
+                        <p><strong>📧 Email:</strong> ${vendor.email}</p>
+                        <p><strong>Status:</strong>
+                            <span class="badge ${vendor.isActive ? 'badge-success' : 'badge-error'}">
+                                ${vendor.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                        </p>
+                    </div>
+
+                    <button onclick="viewVendorPlans(${vendor.vendorId}, '${vendor.messName}')"
+                            class="btn btn-primary" style="width: 100%;">
+                        View Meal Plans →
+                    </button>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function viewVendorPlans(vendorId, messName) {
+        // Store selected vendor
+        localStorage.setItem('selectedVendorId', vendorId);
+        localStorage.setItem('selectedMessName', messName);
+        // Redirect to meal plans
+        window.location.href = `meal-plans.html?vendor=${vendorId}`;
+    }
+
+    // Load vendors on page load
+    loadVendors();
+</script>
+</body>
+</html>

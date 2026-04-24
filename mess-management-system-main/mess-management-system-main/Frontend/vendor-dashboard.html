@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Dashboard - Mess Management</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dashboard">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <!-- Pending Approval Alert -->
+            <div id="pendingAlert" style="display:none; background:#fef3c7; border-left:4px solid #f59e0b;
+     padding:1rem 1.5rem; border-radius:8px; margin-bottom:1.5rem;
+     display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    🔔 <strong><span id="pendingCount">0</span> student(s)</strong> are waiting for your approval!
+                </div>
+                <a href="vendor-pending-payments.html" class="btn btn-primary" style="padding:0.5rem 1rem;">
+                    Review Now →
+                </a>
+            </div>
+            <div class="nav-brand">
+                <h1>🏪 Vendor Dashboard</h1>
+            </div>
+            <div class="nav-links">
+                <a href="vendor-dashboard.html">Dashboard</a>
+                <a href="vendor-manage-plans.html">Meal Plans</a>
+                <a href="vendor-daily-menu.html">Daily Menu</a>
+                <a href="vendor-pending-payments.html">Pending Payments</a>
+                <a href="vendor-scanner.html">Scanner</a>
+                <a href="vendor-students.html">Students</a>
+                <a href="vendor-reports.html">Reports</a>
+                <a href="#" onclick="Auth.logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-content">
+        <div class="container">
+            <h1>Welcome, <span id="vendorName">Vendor</span>!</h1>
+            <p style="margin-bottom: 2rem;">Manage your mess operations efficiently</p>
+
+            <!-- Stats Cards -->
+            <div class="feature-grid" style="margin-bottom: 2rem;">
+                <div class="feature-card">
+                    <div class="feature-icon">👥</div>
+                    <h3>Total Students</h3>
+                    <h2 id="totalStudents" style="color: var(--primary); margin: 1rem 0;">-</h2>
+                    <p>Registered students</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">✅</div>
+                    <h3>Today's Attendance</h3>
+                    <h2 id="todayAttendance" style="color: var(--success); margin: 1rem 0;">-</h2>
+                    <p>Meals served today</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🍽️</div>
+                    <h3>Active Plans</h3>
+                    <h2 id="activePlans" style="color: var(--warning); margin: 1rem 0;">-</h2>
+                    <p>Available meal plans</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h3>Active Subscriptions</h3>
+                    <h2 id="activeSubscriptions" style="color: var(--info); margin: 1rem 0;">-</h2>
+                    <p>Current subscribers</p>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <h2>Quick Actions</h2>
+                <div class="feature-grid" style="margin-top: 1.5rem;">
+                    <a href="vendor-manage-plans.html" class="feature-card" style="text-decoration: none; cursor: pointer;">
+                        <div class="feature-icon">➕</div>
+                        <h3>Create Meal Plan</h3>
+                        <p>Add new meal plan</p>
+                    </a>
+
+                    <a href="vendor-daily-menu.html" class="feature-card" style="text-decoration: none; cursor: pointer;">
+                        <div class="feature-icon">📋</div>
+                        <h3>Update Menu</h3>
+                        <p>Set today's menu</p>
+                    </a>
+
+                    <a href="vendor-scanner.html" class="feature-card" style="text-decoration: none; cursor: pointer;">
+                        <div class="feature-icon">📸</div>
+                        <h3>Scan QR Code</h3>
+                        <p>Mark attendance</p>
+                    </a>
+
+                    <a href="vendor-reports.html" class="feature-card" style="text-decoration: none; cursor: pointer;">
+                        <div class="feature-icon">📊</div>
+                        <h3>View Reports</h3>
+                        <p>Analytics & insights</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card" style="margin-top: 2rem;">
+                <h2>Recent Scans</h2>
+                <div id="recentScans">
+                    <p class="text-center">Loading recent activity...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        // Check authentication
+        Auth.requireAuth('vendor-login.html');
+
+        const vendorId = Auth.getUserId();
+
+        // Load vendor info
+        async function loadVendorInfo() {
+            // For now, use stored name or default
+            const vendorName = localStorage.getItem('vendorName') || 'Vendor Manager';
+            document.getElementById('vendorName').textContent = vendorName;
+        }
+
+        async function loadStats() {
+    try {
+        const vendorId = parseInt(Auth.getUserId());
+
+        // Today's attendance
+        const attendanceResponse = await API.vendor.getTodayAttendance(vendorId);
+        const todayCount = attendanceResponse.data ? attendanceResponse.data.length : 0;
+        document.getElementById('todayAttendance').textContent = todayCount;
+        displayRecentScans(attendanceResponse.data || []);
+
+        // Active plans count
+        const plansResponse = await fetch(
+            'http://localhost:8081/api/vendor/meal-plans',
+            { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+        );
+        const plansData = await plansResponse.json();
+        document.getElementById('activePlans').textContent =
+            plansData.data ? plansData.data.length : 0;
+
+        // ✅ Pending payments count — show notification
+        const pendingResponse = await fetch(
+            `http://localhost:8081/api/vendor/pending-payments?vendorId=${vendorId}`,
+            { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+        );
+        const pendingData = await pendingResponse.json();
+        const pendingCount = pendingData.data ? pendingData.data.length : 0;
+
+        document.getElementById('totalStudents').textContent = pendingCount + ' pending';
+
+        // Show alert banner if there are pending requests
+        if (pendingCount > 0) {
+            document.getElementById('pendingAlert').style.display = 'block';
+            document.getElementById('pendingCount').textContent = pendingCount;
+        }
+
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+        function displayRecentScans(scans) {
+            const container = document.getElementById('recentScans');
+            
+            if (!scans || scans.length === 0) {
+                container.innerHTML = '<p class="text-center">No scans today</p>';
+                return;
+            }
+
+            let html = '<div style="overflow-x: auto;"><table class="simple-table"><thead><tr><th>Student</th><th>Meal Type</th><th>Time</th></tr></thead><tbody>';
+            
+            scans.slice(0, 10).forEach(scan => {
+                const time = new Date(scan.scanTime).toLocaleTimeString();
+                html += `
+                    <tr>
+                        <td>${scan.customerName || 'Student'}</td>
+                        <td><span class="badge badge-${scan.mealType.toLowerCase()}">${scan.mealType}</span></td>
+                        <td>${time}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        // Load data on page load
+        loadVendorInfo();
+        loadStats();
+
+        // Refresh stats every 30 seconds
+        setInterval(loadStats, 30000);
+    </script>
+
+    <style>
+        .simple-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .simple-table th {
+            background: #f7fafc;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .simple-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .badge-breakfast {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .badge-lunch {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .badge-dinner {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My QR Code - Mess Management</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dashboard">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>🍽️ My QR Code</h1>
+            </div>
+            <div class="nav-links">
+                <a href="student-dashboard.html">Dashboard</a>
+                <a href="my-qr-code.html">My QR Code</a>
+                <a href="meal-plans.html">Meal Plans</a>
+                <a href="#" onclick="Auth.logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- QR Code Display -->
+    <div class="dashboard-content">
+        <div class="container">
+            <div class="card">
+                <div id="qrCodeDisplay" class="qr-container">
+                    <h2>Show this QR Code at Mess Counter</h2>
+                    <p class="text-center">Loading your QR code...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QRCode.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        // Check authentication
+        Auth.requireAuth('student-login.html');
+
+        const userId = Auth.getUserId();
+
+        async function loadQRCode() {
+            const qrDisplay = document.getElementById('qrCodeDisplay');
+            
+            try {
+                const response = await API.customer.getQRCode(userId);
+                
+                if (response.success && response.data) {
+                    qrDisplay.innerHTML = `
+                        <h2>Show this QR Code at Mess Counter</h2>
+                        <div id="qrcode" style="margin: 2rem auto;"></div>
+                        <p class="qr-text">${response.data}</p>
+                        <p style="margin-top: 2rem; opacity: 0.7;">
+                            <strong>Instructions:</strong><br>
+                            1. Show this QR code to the mess vendor<br>
+                            2. Vendor will scan it<br>
+                            3. Enjoy your meal!
+                        </p>
+                    `;
+
+                    // Generate large QR code
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: response.data,
+                        width: 300,
+                        height: 300,
+                        colorDark: "#667eea",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                } else {
+                    qrDisplay.innerHTML = `
+                        <div class="alert alert-warning">
+                            <h3>No Active Subscription</h3>
+                            <p>You don't have an active meal subscription. Please book a meal plan first.</p>
+                            <a href="meal-plans.html" class="btn btn-primary mt-2">View Meal Plans</a>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                qrDisplay.innerHTML = `
+                    <div class="alert alert-error">
+                        <h3>Error Loading QR Code</h3>
+                        <p>${error.message}</p>
+                        <a href="student-dashboard.html" class="btn btn-primary mt-2">Back to Dashboard</a>
+                    </div>
+                `;
+            }
+        }
+
+        // Load QR code on page load
+        loadQRCode();
+    </script>
+</body>
+</html>

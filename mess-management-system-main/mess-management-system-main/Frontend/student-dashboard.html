@@ -1,0 +1,520 @@
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>Student Dashboard - Mess Management</title>-->
+<!--    <link rel="stylesheet" href="css/style.css">-->
+<!--</head>-->
+<!--<body class="dashboard">-->
+<!--&lt;!&ndash; Navigation &ndash;&gt;-->
+<!--<nav class="navbar">-->
+<!--    <div class="container">-->
+<!--        <div class="nav-brand">-->
+<!--            <h1>🍽️ Student Dashboard</h1>-->
+<!--        </div>-->
+<!--        <div class="nav-links">-->
+<!--            <a href="student-dashboard.html">Dashboard</a>-->
+<!--            <a href="student-vendors.html">Browse Messes</a>-->
+<!--            <a href="my-qr-code.html">My QR Code</a>-->
+<!--            <a href="meal-plans.html">Meal Plans</a>-->
+<!--            <a href="#" onclick="Auth.logout()">Logout</a>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</nav>-->
+
+<!--&lt;!&ndash; Dashboard Header &ndash;&gt;-->
+<!--<div class="dashboard-header">-->
+<!--    <div class="container">-->
+<!--        <h2>Welcome, <span id="studentName">Student</span>!</h2>-->
+<!--        <p>Manage your meal subscriptions and view your QR code</p>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--&lt;!&ndash; Dashboard Content &ndash;&gt;-->
+<!--<div class="dashboard-content">-->
+<!--    <div class="container">-->
+<!--        <div id="message"></div>-->
+
+<!--        &lt;!&ndash; Quick Stats &ndash;&gt;-->
+<!--        <div class="stats-grid" id="statsGrid">-->
+<!--            <div class="stat-card">-->
+<!--                <h4 id="activeSubscriptions">0</h4>-->
+<!--                <p>Active Subscriptions</p>-->
+<!--            </div>-->
+<!--            <div class="stat-card">-->
+<!--                <h4 id="totalMeals">0</h4>-->
+<!--                <p>Total Meals</p>-->
+<!--            </div>-->
+<!--            <div class="stat-card">-->
+<!--                <h4 id="daysRemaining">0</h4>-->
+<!--                <p>Days Remaining</p>-->
+<!--            </div>-->
+<!--        </div>-->
+
+<!--        &lt;!&ndash; QR Code Section &ndash;&gt;-->
+<!--        <div class="card">-->
+<!--            <h3>My QR Code</h3>-->
+<!--            <div id="qrCodeSection">-->
+<!--                <p class="text-center">Loading...</p>-->
+<!--            </div>-->
+<!--        </div>-->
+
+<!--        &lt;!&ndash; Active Bookings &ndash;&gt;-->
+<!--        <div class="card">-->
+<!--            <h3>Active Bookings</h3>-->
+<!--            <div id="bookingsSection">-->
+<!--                <p>Loading...</p>-->
+<!--            </div>-->
+<!--        </div>-->
+
+<!--        &lt;!&ndash; Browse Messes &ndash;&gt;-->
+<!--        <div class="card">-->
+<!--            <h3>🏢 Browse & Subscribe to a Mess</h3>-->
+<!--            <p style="color: #666; margin-bottom: 1.2rem;">Select a mess near you to view their meal plans and subscribe.</p>-->
+<!--            <div id="browseMess" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">-->
+<!--                <a href="student-vendors.html" class="btn btn-primary" style="text-decoration:none;">-->
+<!--                    🔍 Browse Available Messes-->
+<!--                </a>-->
+<!--                <span id="selectedMessBadge"></span>-->
+<!--            </div>-->
+<!--        </div>-->
+
+<!--        &lt;!&ndash; Available Plans &ndash;&gt;-->
+<!--        <div class="card">-->
+<!--            <h3>Available Meal Plans</h3>-->
+<!--            <div id="plansSection">-->
+<!--                <p>Loading...</p>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--&lt;!&ndash; QRCode.js Library &ndash;&gt;-->
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>-->
+<!--<script src="js/api.js"></script>-->
+<!--<script>-->
+<!--    Auth.requireAuth('student-login.html');-->
+
+<!--    const userId = Auth.getUserId();-->
+
+<!--    async function loadDashboard() {-->
+<!--        try {-->
+<!--            const profile = await API.customer.getProfile(userId);-->
+<!--            document.getElementById('studentName').textContent = profile.data.fullName;-->
+
+<!--            const bookings = await API.customer.getActiveBookings(userId);-->
+<!--            displayBookings(bookings.data);-->
+
+<!--            const qrResponse = await API.customer.getQRCode(userId);-->
+<!--            displayQRCode(qrResponse.data);-->
+
+<!--            const plans = await API.public.getPlans();-->
+<!--            displayPlans(plans.data);-->
+
+<!--        } catch (error) {-->
+<!--            console.error('Error loading dashboard:', error);-->
+<!--            document.getElementById('message').innerHTML =-->
+<!--                `<div class="alert alert-error">${error.message}</div>`;-->
+<!--        }-->
+<!--    }-->
+
+<!--    function displayQRCode(qrCode) {-->
+<!--        const qrSection = document.getElementById('qrCodeSection');-->
+
+<!--        if (qrCode) {-->
+<!--            qrSection.innerHTML = `-->
+<!--                <div class="qr-container">-->
+<!--                    <p><strong>Show this QR code at the mess counter:</strong></p>-->
+<!--                    <div id="qrcode" class="qr-code-canvas"></div>-->
+<!--                    <p class="qr-text">${qrCode}</p>-->
+<!--                    <a href="my-qr-code.html" class="btn btn-primary mt-2">View Full Screen</a>-->
+<!--                </div>-->
+<!--            `;-->
+<!--            new QRCode(document.getElementById("qrcode"), {-->
+<!--                text: qrCode,-->
+<!--                width: 200,-->
+<!--                height: 200,-->
+<!--                colorDark: "#667eea",-->
+<!--                colorLight: "#ffffff",-->
+<!--            });-->
+<!--        } else {-->
+<!--            qrSection.innerHTML = `-->
+<!--                <p class="text-center">No active subscription. <a href="student-vendors.html">Browse a mess</a> to get started.</p>-->
+<!--            `;-->
+<!--        }-->
+<!--    }-->
+
+<!--    function displayBookings(bookings) {-->
+<!--        const bookingsSection = document.getElementById('bookingsSection');-->
+
+<!--        if (bookings && bookings.length > 0) {-->
+<!--            document.getElementById('activeSubscriptions').textContent = bookings.length;-->
+
+<!--            let html = '<table><thead><tr><th>Plan Name</th><th>Status</th><th>Start Date</th><th>End Date</th><th>Days Remaining</th></tr></thead><tbody>';-->
+
+<!--            bookings.forEach(booking => {-->
+<!--                html += `-->
+<!--                    <tr>-->
+<!--                        <td>${booking.planName || 'N/A'}</td>-->
+<!--                        <td><span class="badge ${booking.status === 'ACTIVE' ? 'badge-success' : 'badge-warning'}">${booking.status}</span></td>-->
+<!--                        <td>${booking.startDate || 'N/A'}</td>-->
+<!--                        <td>${booking.endDate || 'N/A'}</td>-->
+<!--                        <td>${booking.daysRemaining || 0} days</td>-->
+<!--                    </tr>-->
+<!--                `;-->
+<!--                if (booking.daysRemaining) {-->
+<!--                    document.getElementById('daysRemaining').textContent = booking.daysRemaining;-->
+<!--                }-->
+<!--            });-->
+
+<!--            html += '</tbody></table>';-->
+<!--            bookingsSection.innerHTML = html;-->
+<!--        } else {-->
+<!--            bookingsSection.innerHTML = '<p>No active bookings. <a href="student-vendors.html">Browse a mess</a> to get started.</p>';-->
+<!--        }-->
+<!--    }-->
+
+<!--    function displayPlans(plans) {-->
+<!--        const plansSection = document.getElementById('plansSection');-->
+
+<!--        // Show selected mess badge if one is saved-->
+<!--        const savedMessName = localStorage.getItem('selectedMessName');-->
+<!--        const badge = document.getElementById('selectedMessBadge');-->
+<!--        if (savedMessName && badge) {-->
+<!--            badge.innerHTML = `-->
+<!--                <span style="background:#e3f2fd; border:1px solid #90caf9; border-radius:20px; padding:0.4rem 1rem; font-size:0.9rem;">-->
+<!--                    ✅ Selected: <strong>${savedMessName}</strong>-->
+<!--                    <a href="student-vendors.html" style="margin-left:0.5rem; color:#1976d2; font-size:0.8rem;">(change)</a>-->
+<!--                </span>`;-->
+<!--        }-->
+
+<!--        if (plans && plans.length > 0) {-->
+<!--            let html = '<div class="feature-grid">';-->
+<!--            plans.forEach(plan => {-->
+<!--                html += `-->
+<!--                    <div class="feature-card">-->
+<!--                        <h3>${plan.planName}</h3>-->
+<!--                        <p>${plan.description || ''}</p>-->
+<!--                        <h4 style="color: var(&#45;&#45;primary);">₹${plan.finalPrice || plan.price}</h4>-->
+<!--                        <p>${plan.durationDays} days</p>-->
+<!--                        <button onclick="bookPlan(${plan.planId})" class="btn btn-primary">Book Now</button>-->
+<!--                    </div>-->
+<!--                `;-->
+<!--            });-->
+<!--            html += '</div>';-->
+<!--            plansSection.innerHTML = html;-->
+<!--        } else {-->
+<!--            plansSection.innerHTML = '<p>No plans available at the moment.</p>';-->
+<!--        }-->
+<!--    }-->
+
+<!--    async function bookPlan(planId) {-->
+<!--        const vendorId = localStorage.getItem('selectedVendorId');-->
+<!--        const messName = localStorage.getItem('selectedMessName');-->
+
+<!--        if (!vendorId) {-->
+<!--            if (confirm('Please select a mess first before booking a plan.\n\nGo to Browse Messes now?')) {-->
+<!--                window.location.href = 'student-vendors.html';-->
+<!--            }-->
+<!--            return;-->
+<!--        }-->
+
+<!--        if (!confirm(`Do you want to book this meal plan at ${messName}?`)) return;-->
+
+<!--        try {-->
+<!--            const paymentId = 'pay_demo_' + Date.now();-->
+<!--            const paymentOrderId = 'order_demo_' + Date.now();-->
+
+<!--            const response = await fetch('http://localhost:8081/api/customer/subscribe', {-->
+<!--                method: 'POST',-->
+<!--                headers: {-->
+<!--                    'Content-Type': 'application/json',-->
+<!--                    'Authorization': `Bearer ${localStorage.getItem('token')}`-->
+<!--                },-->
+<!--                body: JSON.stringify({-->
+<!--                    customerId: userId,-->
+<!--                    planId: planId,-->
+<!--                    vendorId: vendorId,-->
+<!--                    paymentId: paymentId,-->
+<!--                    paymentOrderId: paymentOrderId-->
+<!--                })-->
+<!--            });-->
+
+<!--            const result = await response.json();-->
+<!--            if (result.success) {-->
+<!--                alert('✅ Booking successful! Waiting for vendor approval.');-->
+<!--                loadDashboard();-->
+<!--            } else {-->
+<!--                alert('❌ Error: ' + result.message);-->
+<!--            }-->
+<!--        } catch (error) {-->
+<!--            alert('Error booking plan: ' + error.message);-->
+<!--        }-->
+<!--    }-->
+
+<!--    loadDashboard();-->
+<!--</script>-->
+<!--</body>-->
+<!--</html>-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - Mess Management</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dashboard">
+<!-- Navigation -->
+<nav class="navbar">
+    <div class="container">
+        <div class="nav-brand">
+            <h1>🍽️ Student Dashboard</h1>
+        </div>
+        <div class="nav-links">
+            <a href="student-dashboard.html">Dashboard</a>
+            <a href="student-vendors.html">Browse Messes</a>
+            <a href="my-qr-code.html">My QR Code</a>
+            <a href="meal-plans.html">Meal Plans</a>
+            <a href="#" onclick="Auth.logout()">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Dashboard Header -->
+<div class="dashboard-header">
+    <div class="container">
+        <h2>Welcome, <span id="studentName">Student</span>!</h2>
+        <p>Manage your meal subscriptions and view your QR code</p>
+    </div>
+</div>
+
+<!-- Dashboard Content -->
+<div class="dashboard-content">
+    <div class="container">
+        <div id="message"></div>
+
+        <!-- Quick Stats -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <h4 id="activeSubscriptions">0</h4>
+                <p>Active Subscriptions</p>
+            </div>
+            <div class="stat-card">
+                <h4 id="totalMeals">0</h4>
+                <p>Total Meals</p>
+            </div>
+            <div class="stat-card">
+                <h4 id="daysRemaining">0</h4>
+                <p>Days Remaining</p>
+            </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <div class="card">
+            <h3>My QR Code</h3>
+            <div id="qrCodeSection">
+                <p class="text-center">Loading...</p>
+            </div>
+        </div>
+
+        <!-- Active Bookings -->
+        <div class="card">
+            <h3>Active Bookings</h3>
+            <div id="bookingsSection">
+                <p>Loading...</p>
+            </div>
+        </div>
+
+        <!-- Browse Messes -->
+        <div class="card">
+            <h3>🏢 Browse & Subscribe to a Mess</h3>
+            <p style="color: #666; margin-bottom: 1.2rem;">Select a mess near you to view their meal plans and subscribe.</p>
+            <div id="browseMess" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                <a href="student-vendors.html" class="btn btn-primary" style="text-decoration:none;">
+                    🔍 Browse Available Messes
+                </a>
+                <span id="selectedMessBadge"></span>
+            </div>
+        </div>
+
+        <!-- Available Plans -->
+        <div class="card">
+            <h3>Available Meal Plans</h3>
+            <div id="plansSection">
+                <p>Loading...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QRCode.js Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="js/api.js"></script>
+<script>
+    Auth.requireAuth('student-login.html');
+
+    const userId = Auth.getUserId();
+
+    async function loadDashboard() {
+        try {
+            const profile = await API.customer.getProfile(userId);
+            document.getElementById('studentName').textContent = profile.data.fullName;
+
+            const bookings = await API.customer.getActiveBookings(userId);
+            displayBookings(bookings.data);
+
+            const qrResponse = await API.customer.getQRCode(userId);
+            displayQRCode(qrResponse.data);
+
+            const plans = await API.public.getPlans();
+            displayPlans(plans.data);
+
+        } catch (error) {
+            console.error('Error loading dashboard:', error);
+            document.getElementById('message').innerHTML =
+                `<div class="alert alert-error">${error.message}</div>`;
+        }
+    }
+
+    function displayQRCode(qrCode) {
+        const qrSection = document.getElementById('qrCodeSection');
+
+        if (qrCode) {
+            qrSection.innerHTML = `
+                <div class="qr-container">
+                    <p><strong>Show this QR code at the mess counter:</strong></p>
+                    <div id="qrcode" class="qr-code-canvas"></div>
+                    <p class="qr-text">${qrCode}</p>
+                    <a href="my-qr-code.html" class="btn btn-primary mt-2">View Full Screen</a>
+                </div>
+            `;
+            new QRCode(document.getElementById("qrcode"), {
+                text: qrCode,
+                width: 200,
+                height: 200,
+                colorDark: "#667eea",
+                colorLight: "#ffffff",
+            });
+        } else {
+            qrSection.innerHTML = `
+                <p class="text-center">No active subscription. <a href="student-vendors.html">Browse a mess</a> to get started.</p>
+            `;
+        }
+    }
+
+    function displayBookings(bookings) {
+        const bookingsSection = document.getElementById('bookingsSection');
+
+        if (bookings && bookings.length > 0) {
+            document.getElementById('activeSubscriptions').textContent = bookings.length;
+
+            let html = '<table><thead><tr><th>Plan Name</th><th>Status</th><th>Start Date</th><th>End Date</th><th>Days Remaining</th></tr></thead><tbody>';
+
+            bookings.forEach(booking => {
+                html += `
+                    <tr>
+                        <td>${booking.planName || 'N/A'}</td>
+                        <td><span class="badge ${booking.status === 'ACTIVE' ? 'badge-success' : 'badge-warning'}">${booking.status}</span></td>
+                        <td>${booking.startDate || 'N/A'}</td>
+                        <td>${booking.endDate || 'N/A'}</td>
+                        <td>${booking.daysRemaining || 0} days</td>
+                    </tr>
+                `;
+                if (booking.daysRemaining) {
+                    document.getElementById('daysRemaining').textContent = booking.daysRemaining;
+                }
+            });
+
+            html += '</tbody></table>';
+            bookingsSection.innerHTML = html;
+        } else {
+            bookingsSection.innerHTML = '<p>No active bookings. <a href="student-vendors.html">Browse a mess</a> to get started.</p>';
+        }
+    }
+
+    function displayPlans(plans) {
+        const plansSection = document.getElementById('plansSection');
+
+        // Show selected mess badge if one is saved
+        const savedMessName = localStorage.getItem('selectedMessName');
+        const badge = document.getElementById('selectedMessBadge');
+        if (savedMessName && badge) {
+            badge.innerHTML = `
+                <span style="background:#e3f2fd; border:1px solid #90caf9; border-radius:20px; padding:0.4rem 1rem; font-size:0.9rem;">
+                    ✅ Selected: <strong>${savedMessName}</strong>
+                    <a href="student-vendors.html" style="margin-left:0.5rem; color:#1976d2; font-size:0.8rem;">(change)</a>
+                </span>`;
+        }
+
+        if (plans && plans.length > 0) {
+            let html = '<div class="feature-grid">';
+            plans.forEach(plan => {
+                html += `
+                    <div class="feature-card">
+                        <h3>${plan.planName}</h3>
+                        <p>${plan.description || ''}</p>
+                        <h4 style="color: var(--primary);">₹${plan.finalPrice || plan.price}</h4>
+                        <p>${plan.durationDays} days</p>
+                        <button onclick="bookPlan(${plan.planId})" class="btn btn-primary">Book Now</button>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            plansSection.innerHTML = html;
+        } else {
+            plansSection.innerHTML = '<p>No plans available at the moment.</p>';
+        }
+    }
+
+    async function bookPlan(planId) {
+        const vendorId = localStorage.getItem('selectedVendorId');
+        const messName = localStorage.getItem('selectedMessName');
+
+        if (!vendorId) {
+            if (confirm('Please select a mess first before booking a plan.\n\nGo to Browse Messes now?')) {
+                window.location.href = 'student-vendors.html';
+            }
+            return;
+        }
+
+        if (!confirm(`Do you want to book this meal plan at ${messName}?`)) return;
+
+        try {
+            const paymentId = 'pay_demo_' + Date.now();
+            const paymentOrderId = 'order_demo_' + Date.now();
+
+            const response = await fetch('http://localhost:8081/api/customer/subscribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    customerId: userId,
+                    planId: planId,
+                    vendorId: vendorId,
+                    paymentId: paymentId,
+                    paymentOrderId: paymentOrderId
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                alert('✅ Booking successful! Waiting for vendor approval.');
+                loadDashboard();
+            } else {
+                alert('❌ Error: ' + result.message);
+            }
+        } catch (error) {
+            alert('Error booking plan: ' + error.message);
+        }
+    }
+
+    loadDashboard();
+</script>
+</body>
+</html>

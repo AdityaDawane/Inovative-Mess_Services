@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Meal Plans - Vendor</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dashboard">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>🍽️ Meal Plans</h1>
+            </div>
+            <div class="nav-links">
+                <a href="vendor-dashboard.html">Dashboard</a>
+                <a href="vendor-manage-plans.html">Meal Plans</a>
+                <a href="vendor-daily-menu.html">Daily Menu</a>
+                <a href="vendor-scanner.html">Scanner</a>
+                <a href="vendor-students.html">Students</a>
+                <a href="vendor-reports.html">Reports</a>
+                <a href="#" onclick="Auth.logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="dashboard-content">
+        <div class="container">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h2>Manage Meal Plans</h2>
+                    <button onclick="showCreateForm()" class="btn btn-primary">
+                        ➕ Create New Plan
+                    </button>
+                </div>
+
+                <!-- Create/Edit Form (Hidden by default) -->
+                <div id="planForm" style="display: none; margin-bottom: 2rem; padding: 1.5rem; background: #f7fafc; border-radius: 8px;">
+                    <h3 id="formTitle">Create New Meal Plan</h3>
+                    <div id="formMessage"></div>
+                    
+                    <form id="mealPlanForm">
+                        <input type="hidden" id="planId">
+                        
+                        <div class="form-group">
+                            <label for="planName">Plan Name *</label>
+                            <input type="text" id="planName" required placeholder="e.g., Monthly Premium">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="planType">Plan Type *</label>
+                            <select id="planType" required>
+                                <option value="">Select type...</option>
+                                <option value="DAILY">Daily</option>
+                                <option value="WEEKLY">Weekly</option>
+                                <option value="MONTHLY">Monthly</option>
+                                <option value="SEMESTER">Semester</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="durationDays">Duration (Days) *</label>
+                            <input type="number" id="durationDays" required min="1" placeholder="e.g., 30">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="price">Price (₹) *</label>
+                            <input type="number" id="price" required min="0" step="0.01" placeholder="e.g., 3500">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="discountPercentage">Discount (%) *</label>
+                            <input type="number" id="discountPercentage" required min="0" max="100" step="0.01" value="0" placeholder="e.g., 15">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="finalPrice">Final Price (₹) *</label>
+                            <input type="number" id="finalPrice" required min="0" step="0.01" readonly style="background: #e2e8f0;">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Meals Included *</label>
+                            <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" id="includeBreakfast">
+                                    Breakfast
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" id="includeLunch">
+                                    Lunch
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" id="includeDinner">
+                                    Dinner
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description">Description</label>
+                            <textarea id="description" rows="3" placeholder="Plan description..."></textarea>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem;">
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                Create Plan
+                            </button>
+                            <button type="button" onclick="hideForm()" class="btn" style="background: #6c757d;">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Plans List -->
+                <div id="plansList">
+                    <p class="text-center">Loading meal plans...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        Auth.requireAuth('vendor-login.html');
+        const vendorId = Auth.getUserId();
+         const token = localStorage.getItem('token');
+
+    // ✅ Debug: Check if token exists
+    if (!token) {
+        console.error('No token found!');
+        alert('Please login first!');
+        window.location.href = 'vendor-login.html';
+    }
+
+    console.log('Token exists:', token ? 'YES' : 'NO');
+    console.log('Vendor ID:', vendorId);
+
+        // Auto-calculate final price
+        document.getElementById('price').addEventListener('input', calculateFinalPrice);
+        document.getElementById('discountPercentage').addEventListener('input', calculateFinalPrice);
+
+        function calculateFinalPrice() {
+            const price = parseFloat(document.getElementById('price').value) || 0;
+            const discount = parseFloat(document.getElementById('discountPercentage').value) || 0;
+            const finalPrice = price - (price * discount / 100);
+            document.getElementById('finalPrice').value = finalPrice.toFixed(2);
+        }
+
+        function showCreateForm() {
+            document.getElementById('planForm').style.display = 'block';
+            document.getElementById('formTitle').textContent = 'Create New Meal Plan';
+            document.getElementById('submitBtn').textContent = 'Create Plan';
+            document.getElementById('mealPlanForm').reset();
+            document.getElementById('planId').value = '';
+            document.getElementById('formMessage').innerHTML = '';
+        }
+
+        function hideForm() {
+            document.getElementById('planForm').style.display = 'none';
+            document.getElementById('mealPlanForm').reset();
+            document.getElementById('formMessage').innerHTML = '';
+        }
+
+        // Handle form submission
+        document.getElementById('mealPlanForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formMessage = document.getElementById('formMessage');
+            formMessage.innerHTML = '';
+
+            // ✅ FIX: Remove JSON.stringify, send as object
+            const planData = {
+                planName: document.getElementById('planName').value,
+                planType: document.getElementById('planType').value,
+                durationDays: parseInt(document.getElementById('durationDays').value),
+                price: parseFloat(document.getElementById('price').value),
+                discountPercentage: parseFloat(document.getElementById('discountPercentage').value),
+                finalPrice: parseFloat(document.getElementById('finalPrice').value),
+                mealsIncluded: {  // ✅ Send as object, NOT string!
+                    breakfast: document.getElementById('includeBreakfast').checked,
+                    lunch: document.getElementById('includeLunch').checked,
+                    dinner: document.getElementById('includeDinner').checked
+                },
+                description: document.getElementById('description').value,
+                isActive: true
+            };
+
+            console.log('Sending plan data:', planData);
+
+            try {
+                UI.showLoading(document.getElementById('submitBtn'));
+
+                const planId = document.getElementById('planId').value;
+
+                // ✅ FIX: Correct URL construction
+                const url = planId
+                    ? `http://localhost:8081/api/vendor/meal-plans/${planId}`
+                    : 'http://localhost:8081/api/vendor/meal-plans/create';
+
+                const response = await fetch(url, {
+                    method: planId ? 'PUT' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(planData)
+                });
+
+                const result = await response.json();
+                console.log('Response:', result);
+
+                if (result.success) {
+                    formMessage.innerHTML = '<div class="alert alert-success">✅ Plan saved successfully!</div>';
+                    setTimeout(() => {
+                        hideForm();
+                        loadPlans();
+                    }, 1500);
+                } else {
+                    formMessage.innerHTML = `<div class="alert alert-error">❌ ${result.message || 'Error saving plan'}</div>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                formMessage.innerHTML = '<div class="alert alert-error">❌ Error: ' + error.message + '</div>';
+            } finally {
+                UI.hideLoading(document.getElementById('submitBtn'), planId ? 'Update Plan' : 'Create Plan');
+            }
+        });
+
+        // Load and display plans
+        async function loadPlans() {
+        try {
+            console.log('Loading plans with token:', token.substring(0, 20) + '...');
+
+            const response = await fetch('http://localhost:8081/api/vendor/meal-plans', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+
+            // ✅ Check if response is actually JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Not JSON response:', text);
+                throw new Error('Server returned non-JSON response: ' + text);
+            }
+
+            const result = await response.json();
+            console.log('Result:', result);
+
+            displayPlans(result.data || []);
+        } catch (error) {
+            console.error('Error loading plans:', error);
+            document.getElementById('plansList').innerHTML =
+                '<p class="text-center">Error loading plans: ' + error.message + '</p>';
+        }
+    }
+
+        function displayPlans(plans) {
+            const container = document.getElementById('plansList');
+
+            if (plans.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center" style="padding: 2rem;">
+                        <h3>No Meal Plans Yet</h3>
+                        <p>Click "Create New Plan" to add your first meal plan!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="feature-grid">';
+
+            plans.forEach(plan => {
+                const meals = parseMeals(plan.mealsIncluded);
+                html += `
+                    <div class="feature-card">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <h3>${plan.planName}</h3>
+                            <span class="badge badge-${plan.planType.toLowerCase()}">${plan.planType}</span>
+                        </div>
+
+                        <p style="min-height: 2.5rem;">${plan.description || 'No description'}</p>
+
+                        <div style="margin: 1rem 0;">
+                            <div style="text-decoration: line-through; color: #888; font-size: 0.9rem;">₹${plan.price}</div>
+                            <h2 style="color: var(--primary); margin: 0.5rem 0;">₹${plan.finalPrice || plan.price}</h2>
+                            ${plan.discountPercentage > 0 ? `<div style="color: var(--success); font-weight: 600;">Save ${plan.discountPercentage}%</div>` : ''}
+                        </div>
+
+                        <div style="font-size: 0.9rem; margin: 1rem 0;">
+                            <div>📅 ${plan.durationDays} days</div>
+                            <div>🍽️ ${meals.join(', ')}</div>
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button onclick="deletePlan(${plan.planId}, '${plan.planName}')"
+                                    class="btn" style="flex: 1; background: #dc2626; color: white;">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function parseMeals(mealsIncluded) {
+            try {
+                // Handle both string and object
+                const meals = typeof mealsIncluded === 'string'
+                    ? JSON.parse(mealsIncluded)
+                    : mealsIncluded;
+
+                const included = [];
+                if (meals.breakfast) included.push('Breakfast');
+                if (meals.lunch) included.push('Lunch');
+                if (meals.dinner) included.push('Dinner');
+                return included.length > 0 ? included : ['No meals'];
+            } catch {
+                return ['All meals'];
+            }
+        }
+
+        async function deletePlan(planId, planName) {
+            if (!confirm(`Are you sure you want to delete "${planName}"?`)) {
+                return;
+            }
+
+            try {
+                // ✅ FIX: Correct delete URL
+                const response = await fetch(`http://localhost:8081/api/vendor/meal-plans/${planId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Plan deleted successfully!');
+                    loadPlans();
+                } else {
+                    alert('❌ Error deleting plan: ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // Load plans on page load
+        loadPlans();
+    </script>
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registered Students - Mess Management</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dashboard">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>🍽️ Vendor Dashboard</h1>
+            </div>
+            <div class="nav-links">
+                <a href="vendor-dashboard.html">Dashboard</a>
+                <a href="vendor-manage-plans.html">Meal Plans</a>
+                <a href="vendor-daily-menu.html">Daily Menu</a>
+                <a href="vendor-scanner.html">Scanner</a>
+                <a href="vendor-students.html">Students</a>
+                <a href="vendor-reports.html">Reports</a>
+                <a href="#" onclick="Auth.logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="container">
+            <h2>Students Registered for Mess Service</h2>
+            <p>View all active subscriptions and student details</p>
+        </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-content">
+        <div class="container">
+            <!-- Summary Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h4 id="totalStudents">3</h4>
+                    <p>Total Students</p>
+                </div>
+                <div class="stat-card">
+                    <h4 id="activeSubscriptions">2</h4>
+                    <p>Active Subscriptions</p>
+                </div>
+                <div class="stat-card">
+                    <h4 id="todayScans">0</h4>
+                    <p>Today's Scans</p>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="card">
+                <h3>Filter Students</h3>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label for="searchInput">Search by Name or Email</label>
+                        <input type="text" id="searchInput" placeholder="Type to search..." onkeyup="filterStudents()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label for="statusFilter">Subscription Status</label>
+                        <select id="statusFilter" onchange="filterStudents()">
+                            <option value="ALL">All</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="EXPIRED">Expired</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students List -->
+            <div class="card">
+                <h3>All Students</h3>
+                <div id="studentsSection"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        Auth.requireAuth('vendor-login.html');
+            const vendorId = parseInt(Auth.getUserId()); // parseInt: ensure it's a number
+            let allStudents = [];
+
+            async function loadStudents() {
+        try {
+            const response = await fetch(
+                `http://localhost:8081/api/vendor/students?vendorId=${vendorId}`,
+                { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+            );
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                allStudents = result.data;
+            } else {
+                allStudents = [];
+            }
+
+            document.getElementById('totalStudents').textContent = allStudents.length;
+            document.getElementById('activeSubscriptions').textContent =
+                allStudents.filter(s => s.subscriptionStatus === 'ACTIVE').length;
+            displayStudents(allStudents);
+
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('studentsSection').innerHTML =
+                '<p class="text-center">Error loading students</p>';
+        }
+    }
+
+    // Try to load today's scan count
+    async function loadTodayStats() {
+        try {
+            const response = await API.vendor.getTodayAttendance();
+            if (response.success && response.data) {
+                document.getElementById('todayScans').textContent = response.data.length || 0;
+            }
+        } catch (error) { /* ignore */ }
+    }
+
+                function displayStudents(students) {
+                    const studentsSection = document.getElementById('studentsSection');
+
+                    if (!students || students.length === 0) {
+                        studentsSection.innerHTML = '<p class="text-center">No students found</p>';
+                        return;
+                    }
+
+                    let html = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Plan</th>
+                                    <th>Status</th>
+                                    <th>End Date</th>
+                                    <th>Days Left</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    students.forEach(student => {
+                        const statusClass = student.subscriptionStatus === 'ACTIVE' ? 'success' :
+                                          student.subscriptionStatus === 'EXPIRED' ? 'danger' : 'warning';
+
+                        html += `
+                            <tr>
+                                <td>${student.customerId}</td>
+                                <td><strong>${student.fullName}</strong></td>
+                                <td>${student.email}</td>
+                                <td>${student.phone}</td>
+                                <td>${student.planName}</td>
+                                <td>
+                                    <span class="badge badge-${statusClass}">
+                                        ${student.subscriptionStatus}
+                                    </span>
+                                </td>
+                                <td>${student.endDate}</td>
+                                <td>${student.daysRemaining} days</td>
+                                <td>
+                                    <button onclick="viewStudent(${student.customerId})" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.9rem;">
+                                        View Details
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+
+                    html += '</tbody></table>';
+                    studentsSection.innerHTML = html;
+                }
+
+                function filterStudents() {
+                    const searchText = document.getElementById('searchInput').value.toLowerCase();
+                    const statusFilter = document.getElementById('statusFilter').value;
+
+                    let filtered = allStudents;
+
+                    // Search filter
+                    if (searchText) {
+                        filtered = filtered.filter(s =>
+                            s.fullName.toLowerCase().includes(searchText) ||
+                            s.email.toLowerCase().includes(searchText)
+                        );
+                    }
+
+                    // Status filter
+                    if (statusFilter !== 'ALL') {
+                        filtered = filtered.filter(s => s.subscriptionStatus === statusFilter);
+                    }
+
+                    displayStudents(filtered);
+                }
+
+                function viewStudent(customerId) {
+                    const student = allStudents.find(s => s.customerId === customerId);
+                    if (!student) return;
+
+                    alert(`Student Details:
+
+        Name: ${student.fullName}
+        Email: ${student.email}
+        Phone: ${student.phone}
+        Plan: ${student.planName}
+        Status: ${student.subscriptionStatus}
+        Start Date: ${student.startDate}
+        End Date: ${student.endDate}
+        Days Remaining: ${student.daysRemaining}
+        QR Code: ${student.qrCode}
+                    `);
+                }
+
+                // Load students on page load
+                displayStudents(allStudents);
+
+                // Load today's scans
+                async function loadTodayStats() {
+                    try {
+                        const response = await API.vendor.getTodayAttendance();
+                        if (response.success && response.data) {
+                            document.getElementById('todayScans').textContent = response.data.length || 0;
+                        }
+                    } catch (error) {
+                        console.error('Error loading stats:', error);
+                    }
+                }
+
+                loadTodayStats();
+         loadStudents();
+    </script>
+
+    <style>
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .badge-success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        .badge-danger {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        .badge-warning {
+            background: #feebc8;
+            color: #7c2d12;
+        }
+    </style>
+</body>
+</html>

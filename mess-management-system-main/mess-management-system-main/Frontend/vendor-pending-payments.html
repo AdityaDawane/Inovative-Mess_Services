@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pending Payments</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="navbar">
+    <div class="nav-brand">🍽️ Vendor Portal</div>
+    <div class="nav-links">
+        <a href="vendor-dashboard.html">Dashboard</a>
+        <a href="vendor-pending-payments.html" class="active">Pending Payments</a>
+        <a href="vendor-manage-plans.html">Manage Plans</a>
+        <a href="javascript:void(0)" onclick="Auth.logout()">Logout</a>
+    </div>
+</nav>
+
+<div class="container">
+    <h1>⏳ Pending Payment Approvals</h1>
+    <p>Review and approve student subscription payments</p>
+
+    <div id="message"></div>
+    <div id="pendingList"></div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    Auth.requireAuth('vendor-login.html');
+   const vendorId = parseInt(Auth.getUserId()); // was: Auth.getUserId()
+
+    async function loadPending() {
+        try {
+            const response = await fetch(
+                `http://localhost:8081/api/vendor/pending-payments?vendorId=${vendorId}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                displayPending(result.data);
+            } else {
+                document.getElementById('pendingList').innerHTML =
+                    '<p class="text-center">No pending payments</p>';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    function displayPending(payments) {
+        const container = document.getElementById('pendingList');
+
+        if (payments.length === 0) {
+            container.innerHTML = `
+                <div class="text-center" style="padding: 3rem;">
+                    <h3>✅ All Caught Up!</h3>
+                    <p>No pending payment approvals</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '<div class="feature-grid">';
+
+        payments.forEach(p => {
+            html += `
+                <div class="feature-card">
+                    <div style="display: flex; justify-content: space-between;">
+                        <h3>${p.customerName}</h3>
+                        <span class="badge badge-warning">PENDING</span>
+                    </div>
+
+                    <div style="margin: 1rem 0; font-size: 0.95rem;">
+                        <p><strong>📧</strong> ${p.customerEmail}</p>
+                        <p><strong>📱</strong> ${p.customerPhone}</p>
+                        <p><strong>📦 Plan:</strong> ${p.planName} (${p.planType})</p>
+                        <p><strong>💰 Amount:</strong> ₹${p.amount}</p>
+                        <p><strong>📅 Duration:</strong> ${p.startDate} to ${p.endDate}</p>
+                        <p><strong>💳 Payment ID:</strong> ${p.paymentId}</p>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="approve(${p.subscriptionId}, '${p.customerName}')"
+                                class="btn btn-success" style="flex: 1;">
+                            ✅ Approve
+                        </button>
+                        <button onclick="reject(${p.subscriptionId}, '${p.customerName}')"
+                                class="btn" style="flex: 1; background: #dc2626; color: white;">
+                            ❌ Reject
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    async function approve(subscriptionId, name) {
+        if (!confirm(`Approve payment for ${name}?`)) return;
+
+        try {
+            const response = await fetch('http://localhost:8081/api/vendor/approve-payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ subscriptionId, vendorId })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert(`✅ Approved! ${name} has been added to your student list.`);
+                loadPending();
+            } else {
+                alert('❌ Error: ' + result.message);
+            }
+        } catch (error) {
+            alert('❌ Error: ' + error.message);
+        }
+    }
+
+    async function reject(subscriptionId, name) {
+        const reason = prompt(`Reject ${name}'s payment?\n\nReason:`);
+        if (!reason) return;
+
+        try {
+            const response = await fetch('http://localhost:8081/api/vendor/reject-payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ subscriptionId, vendorId, reason })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert(`❌ Payment rejected.`);
+                loadPending();
+            } else {
+                alert('❌ Error: ' + result.message);
+            }
+        } catch (error) {
+            alert('❌ Error: ' + error.message);
+        }
+    }
+
+    loadPending();
+</script>
+</body>
+</html>
