@@ -212,12 +212,10 @@ Key tables:
 
 ## 👨‍💻 Author
 
-**Your Name**  
-📧 your.email@example.com  
-🔗 [LinkedIn](https://linkedin.com/in/yourprofile) | [GitHub](https://github.com/your-username)
+**Aditya Dawane**  
+📧 dawaneadi@gmail.com  
+ [GitHub](https://github.com/adityadawane)
 
 ---
 
-## 📄 License
 
-This project is licensed under the MIT License.
